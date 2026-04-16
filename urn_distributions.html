@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Urn Model — Probability Distributions</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; color: #1a1a18; min-height: 100vh; padding: 24px 16px; }
+  h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #5f5e5a; margin-bottom: 20px; }
+  .card { background: #fff; border-radius: 12px; border: 0.5px solid rgba(0,0,0,0.12); padding: 20px; max-width: 760px; margin: 0 auto; }
+  .urn-box { background: #f5f5f3; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; }
+  .urn-label { font-size: 12px; color: #5f5e5a; margin-bottom: 4px; }
+  .urn-summary { font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+  .urn-visual { display: flex; flex-wrap: wrap; gap: 3px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+  .tab-btn { padding: 6px 14px; border: 0.5px solid rgba(0,0,0,0.25); border-radius: 8px; background: transparent; cursor: pointer; font-size: 13px; color: #5f5e5a; font-family: inherit; }
+  .tab-btn.active { background: #e6f1fb; color: #0c447c; border-color: transparent; font-weight: 500; }
+  .tab-btn:hover:not(.active) { background: #f5f5f3; }
+  .panel { display: none; } .panel.active { display: block; }
+  .formula-box { background: #f5f5f3; border-left: 3px solid #378add; padding: 10px 14px; font-size: 13px; color: #5f5e5a; margin: 10px 0; font-family: 'Courier New', monospace; line-height: 1.5; }
+  .slider-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .slider-row label { font-size: 13px; color: #5f5e5a; min-width: 160px; }
+  .slider-row input[type=range] { flex: 1; accent-color: #378add; cursor: pointer; }
+  .val-badge { font-size: 13px; font-weight: 500; min-width: 36px; text-align: right; }
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
+  .stat-card { background: #f5f5f3; border-radius: 8px; padding: 10px 12px; }
+  .stat-lbl { font-size: 11px; color: #5f5e5a; margin-bottom: 3px; }
+  .stat-val { font-size: 20px; font-weight: 500; }
+  .chart-wrap { position: relative; width: 100%; height: 230px; margin-top: 6px; }
+  .compare-note { margin-top: 8px; font-size: 12px; color: #5f5e5a; background: #f5f5f3; border-radius: 6px; padding: 7px 10px; }
+  @media (max-width: 500px) {
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+    .slider-row label { min-width: 120px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div style="max-width:760px;margin:0 auto;">
+  <h1>Urn Model — Probability Distributions</h1>
+  <p class="subtitle">Example 3.1 &nbsp;·&nbsp; 100 flashbulbs, 5 defective &nbsp;·&nbsp; Adjust sliders to explore</p>
+
+  <div class="card">
+    <div class="urn-box">
+      <div class="urn-label">Urn contents</div>
+      <div class="urn-summary" id="urn-summary">100 bulbs: 5 defective (red), 95 working (grey)</div>
+      <div class="urn-visual" id="urn-visual"></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('hyper',event)">Hypergeometric</button>
+      <button class="tab-btn" onclick="showTab('binom',event)">Binomial</button>
+      <button class="tab-btn" onclick="showTab('geo',event)">Geometric</button>
+    </div>
+
+    <!-- HYPERGEOMETRIC -->
+    <div id="hyper" class="panel active">
+      <div class="formula-box">
+        Drawing <strong>without</strong> replacement<br>
+        P(X = k) = C(K, k) · C(N−K, n−k) / C(N, n)<br>
+        Task (b): N=100, K=5, n=5 → P(X=2) = ?
+      </div>
+      <div class="slider-row"><label>Total bulbs N</label><input type="range" min="10" max="200" step="1" value="100" id="h-N" oninput="updateHyper()"><span class="val-badge" id="h-N-v">100</span></div>
+      <div class="slider-row"><label>Defective bulbs K</label><input type="range" min="1" max="50" step="1" value="5" id="h-K" oninput="updateHyper()"><span class="val-badge" id="h-K-v">5</span></div>
+      <div class="slider-row"><label>Sample size n</label><input type="range" min="1" max="30" step="1" value="5" id="h-n" oninput="updateHyper()"><span class="val-badge" id="h-n-v">5</span></div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-lbl">Mean μ = n·K/N</div><div class="stat-val" id="h-mu">—</div></div>
+        <div class="stat-card"><div class="stat-lbl">Variance σ²</div><div class="stat-val" id="h-var">—</div></div>
+        <div class="stat-card"><div class="stat-lbl">P(X = 2)</div><div class="stat-val" id="h-p2" style="color:#185fa5;">—</div></div>
+      </div>
+      <div class="chart-wrap"><canvas id="hyperChart" role="img" aria-label="Hypergeometric probability distribution">Hypergeometric distribution bar chart</canvas></div>
+    </div>
+
+    <!-- BINOMIAL -->
+    <div id="binom" class="panel">
+      <div class="formula-box">
+        Drawing <strong>with</strong> replacement &nbsp;·&nbsp; p = K/N<br>
+        P(X = k) = C(n, k) · p^k · (1−p)^(n−k)<br>
+        Task (a): N=100, K=5, n=5 → P(X=2) = ?
+      </div>
+      <div class="slider-row"><label>Total bulbs N</label><input type="range" min="10" max="200" step="1" value="100" id="b-N" oninput="updateBinom()"><span class="val-badge" id="b-N-v">100</span></div>
+      <div class="slider-row"><label>Defective bulbs K</label><input type="range" min="1" max="50" step="1" value="5" id="b-K" oninput="updateBinom()"><span class="val-badge" id="b-K-v">5</span></div>
+      <div class="slider-row"><label>Sample size n</label><input type="range" min="1" max="30" step="1" value="5" id="b-n" oninput="updateBinom()"><span class="val-badge" id="b-n-v">5</span></div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-lbl">p = K/N</div><div class="stat-val" id="b-p">—</div></div>
+        <div class="stat-card"><div class="stat-lbl">Mean μ = n·p</div><div class="stat-val" id="b-mu">—</div></div>
+        <div class="stat-card"><div class="stat-lbl">P(X = 2)</div><div class="stat-val" id="b-p2" style="color:#0f6e56;">—</div></div>
+      </div>
+      <div class="chart-wrap"><canvas id="binomChart" role="img" aria-label="Binomial probability distribution">Binomial distribution bar chart</canvas></div>
+      <div class="compare-note" id="binom-compare"></div>
+    </div>
+
+    <!-- GEOMETRIC -->
+    <div id="geo" class="panel">
+      <div class="formula-box">
+        Drawing <strong>with</strong> replacement until 1st defective bulb &nbsp;·&nbsp; p = K/N<br>
+        P(X = k) = (1−p)^(k−1) · p<br>
+        Task (c): N=100, K=5 → P(X=5) = ?
+      </div>
+      <div class="slider-row"><label>Total bulbs N</label><input type="range" min="10" max="200" step="1" value="100" id="g-N" oninput="updateGeo()"><span class="val-badge" id="g-N-v">100</span></div>
+      <div class="slider-row"><label>Defective bulbs K</label><input type="range" min="1" max="50" step="1" value="5" id="g-K" oninput="updateGeo()"><span class="val-badge" id="g-K-v">5</span></div>
+      <div class="slider-row"><label>Show up to draw</label><input type="range" min="5" max="60" step="1" value="20" id="g-max" oninput="updateGeo()"><span class="val-badge" id="g-max-v">20</span></div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-lbl">p = K/N</div><div class="stat-val" id="g-p">—</div></div>
+        <div class="stat-card"><div class="stat-lbl">Mean 1/p</div><div class="stat-val" id="g-mu">—</div></div>
+        <div class="stat-card"><div class="stat-lbl">P(X = 5)</div><div class="stat-val" id="g-p5" style="color:#993c1d;">—</div></div>
+      </div>
+      <div class="chart-wrap"><canvas id="geoChart" role="img" aria-label="Geometric probability distribution">Geometric distribution bar chart</canvas></div>
+    </div>
+  </div>
+
+  <p style="font-size:11px;color:#888;text-align:center;margin-top:12px;">Interactive tool for Example 3.1 — works offline, no installation needed</p>
+</div>
+
+<script>
+function logC(n,k){if(k<0||k>n)return-Infinity;if(k===0||k===n)return 0;let r=0;for(let i=0;i<k;i++)r+=Math.log(n-i)-Math.log(i+1);return r;}
+function hyperProb(N,K,n,k){if(k<0||k>Math.min(K,n)||(n-k)>(N-K))return 0;return Math.exp(logC(K,k)+logC(N-K,n-k)-logC(N,n));}
+function binomProb(n,p,k){if(k<0||k>n||p<=0||p>=1)return 0;return Math.exp(logC(n,k)+k*Math.log(p)+(n-k)*Math.log(1-p));}
+function geoProb(p,k){return Math.pow(1-p,k-1)*p;}
+function fmt(x){return x===0?'0':x<0.0001?x.toExponential(2):x.toFixed(4);}
+
+let hChart,bChart,gChart;
+
+function makeChart(id,labels,data,colors){
+  const ctx=document.getElementById(id).getContext('2d');
+  return new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'P = '+fmt(c.raw)}}},
+      scales:{
+        x:{ticks:{font:{size:11},color:'#888',maxRotation:0,autoSkip:true,maxTicksLimit:15},grid:{display:false}},
+        y:{ticks:{font:{size:11},color:'#888',callback:v=>v.toFixed(3)},grid:{color:'rgba(0,0,0,0.07)'}}
+      }
+    }
+  });
+}
+
+function updateUrn(N,K){
+  document.getElementById('urn-summary').textContent=N+' bulbs: '+K+' defective (red), '+(N-K)+' working (grey)';
+  const vis=document.getElementById('urn-visual');
+  const show=Math.min(N,70),defShown=Math.round(K/N*show);
+  let h='';
+  for(let i=0;i<show;i++)h+='<span style="width:10px;height:10px;border-radius:50%;display:inline-block;background:'+(i<defShown?'#E24B4A':'#888780')+'"></span>';
+  if(N>70)h+='<span style="font-size:11px;color:#888;margin-left:4px;">… +'+(N-70)+' more</span>';
+  vis.innerHTML=h;
+}
+
+function updateHyper(){
+  const N=+document.getElementById('h-N').value;
+  const K=Math.min(+document.getElementById('h-K').value,N-1);
+  const n=Math.min(+document.getElementById('h-n').value,N);
+  document.getElementById('h-N-v').textContent=N;
+  document.getElementById('h-K-v').textContent=K;
+  document.getElementById('h-n-v').textContent=n;
+  updateUrn(N,K);
+  document.getElementById('h-mu').textContent=(n*K/N).toFixed(3);
+  document.getElementById('h-var').textContent=(n*(K/N)*((N-K)/N)*((N-n)/(N-1))).toFixed(3);
+  const maxK=Math.min(K,n),labels=[],data=[];
+  for(let k=0;k<=maxK;k++){labels.push(k);data.push(hyperProb(N,K,n,k));}
+  document.getElementById('h-p2').textContent=data[2]!==undefined?fmt(data[2]):'—';
+  const c=data.map((_,i)=>i===2?'#185FA5':'#B5D4F4');
+  if(!hChart){hChart=makeChart('hyperChart',labels,data,c);}
+  else{hChart.data.labels=labels;hChart.data.datasets[0].data=data;hChart.data.datasets[0].backgroundColor=c;hChart.update();}
+}
+
+function updateBinom(){
+  const N=+document.getElementById('b-N').value;
+  const K=Math.min(+document.getElementById('b-K').value,N-1);
+  const n=Math.min(+document.getElementById('b-n').value,N);
+  document.getElementById('b-N-v').textContent=N;
+  document.getElementById('b-K-v').textContent=K;
+  document.getElementById('b-n-v').textContent=n;
+  updateUrn(N,K);
+  const p=K/N;
+  document.getElementById('b-p').textContent=p.toFixed(3);
+  document.getElementById('b-mu').textContent=(n*p).toFixed(3);
+  const labels=[],data=[];
+  for(let k=0;k<=n;k++){labels.push(k);data.push(binomProb(n,p,k));}
+  document.getElementById('b-p2').textContent=data[2]!==undefined?fmt(data[2]):'—';
+  const pHyp=hyperProb(N,K,n,2);
+  document.getElementById('binom-compare').textContent=
+    'Comparison at k=2:  Hypergeometric P = '+fmt(pHyp)+'  |  Binomial P = '+(data[2]!==undefined?fmt(data[2]):'—')+'  |  difference = '+Math.abs(pHyp-(data[2]||0)).toExponential(2)+
+    '   (difference shrinks as N grows — try N = 1000)';
+  const c=data.map((_,i)=>i===2?'#0F6E56':'#9FE1CB');
+  if(!bChart){bChart=makeChart('binomChart',labels,data,c);}
+  else{bChart.data.labels=labels;bChart.data.datasets[0].data=data;bChart.data.datasets[0].backgroundColor=c;bChart.update();}
+}
+
+function updateGeo(){
+  const N=+document.getElementById('g-N').value;
+  const K=Math.min(+document.getElementById('g-K').value,N-1);
+  const maxK=+document.getElementById('g-max').value;
+  document.getElementById('g-N-v').textContent=N;
+  document.getElementById('g-K-v').textContent=K;
+  document.getElementById('g-max-v').textContent=maxK;
+  updateUrn(N,K);
+  const p=K/N;
+  document.getElementById('g-p').textContent=p.toFixed(3);
+  document.getElementById('g-mu').textContent=(1/p).toFixed(2);
+  const labels=[],data=[];
+  for(let k=1;k<=maxK;k++){labels.push(k);data.push(geoProb(p,k));}
+  document.getElementById('g-p5').textContent=data[4]!==undefined?fmt(data[4]):'—';
+  const c=data.map((_,i)=>i===4?'#D85A30':'#F5C4B3');
+  if(!gChart){gChart=makeChart('geoChart',labels,data,c);}
+  else{gChart.data.labels=labels;gChart.data.datasets[0].data=data;gChart.data.datasets[0].backgroundColor=c;gChart.update();}
+}
+
+function showTab(id,ev){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  ev.target.classList.add('active');
+  if(id==='hyper')updateHyper();
+  if(id==='binom')updateBinom();
+  if(id==='geo')updateGeo();
+}
+
+updateHyper();
+</script>
+</body>
+</html>
